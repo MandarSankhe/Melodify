@@ -36,21 +36,35 @@ export default function Home() {
         setAudioUrl(url);
         setIsProcessing(true);
 
-        // Send to backend
+        // Send to /identify endpoint
         const reader = new FileReader();
         reader.onloadend = async () => {
           try {
             const base64Audio = reader.result?.toString().split(',')[1];
-            const res = await fetch('http://localhost:8080/process', {
+            // Call /identify for music identification
+            const identifyRes = await fetch('http://localhost:8080/identify', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ audio: base64Audio }),
             });
-            const data = await res.json();
-            setResult(data);
+            const identifyData = await identifyRes.json();
+            let identifyInfo = '';
+            try {
+              // Try to parse the body as JSON for pretty display
+              const parsed = JSON.parse(identifyData.body);
+              if (parsed && parsed.metadata && parsed.metadata.music && parsed.metadata.music.length > 0) {
+                const music = parsed.metadata.music[0];
+                identifyInfo = `Title: ${music.title || 'Unknown'} | Artist: ${(music.artists && music.artists[0]?.name) || 'Unknown'}`;
+              } else {
+                identifyInfo = 'No match found.';
+              }
+            } catch (e) {
+              identifyInfo = 'Could not parse identification result.';
+            }
+            setResult({ rating: 0, suggestions: identifyInfo });
           } catch (error) {
-            console.error('Error processing audio:', error);
-            setResult({ rating: 0, suggestions: 'Error processing your recording. Please try again.' });
+            console.error('Error identifying audio:', error);
+            setResult({ rating: 0, suggestions: 'Error identifying your recording. Please try again.' });
           } finally {
             setIsProcessing(false);
           }
@@ -91,13 +105,18 @@ export default function Home() {
       {/* Background Pattern */}
       <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-gray-900 to-blue-900/20"></div>
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,_rgba(120,_119,_198,_0.1),_transparent_50%),radial-gradient(circle_at_80%_20%,_rgba(255,_119,_198,_0.1),_transparent_50%)]"></div>
-      
-      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center p-4">
+
+      <div className="relative z-10 min-h-screen flex flex-col items-center justify-center">
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-6xl font-bold mb-4 bg-gradient-to-r from-purple-400 via-pink-400 to-blue-400 bg-clip-text text-transparent">
-            Melodify
-          </h1>
+        <div className="text-center mb-12 flex flex-col items-center">
+          <Image
+            src="/images/Logo.png"
+            alt="Melodify Logo"
+            width={96}
+            height={96}
+            className="mx-auto drop-shadow-lg mb-4"
+            priority
+          />
           <p className="text-xl md:text-2xl text-gray-300 mb-2 font-light">
             Sing & Get Rated
           </p>
@@ -153,9 +172,12 @@ export default function Home() {
                 </p>
               )}
               {isProcessing && (
-                <p className="text-lg font-medium text-blue-400">
-                  🤖 Analyzing your performance...
-                </p>
+                <div className="flex flex-col items-center justify-center">
+                  <div className="w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin mb-2"></div>
+                  <p className="text-lg font-medium text-blue-400">
+                    🤖 Identifying your song...
+                  </p>
+                </div>
               )}
               {!recording && !isProcessing && !audioUrl && (
                 <p className="text-gray-400">
@@ -182,24 +204,12 @@ export default function Home() {
             <div className="mt-8 p-6 bg-gradient-to-r from-gray-800/80 to-gray-700/80 rounded-xl border border-gray-600/50 backdrop-blur-sm">
               <div className="text-center mb-4">
                 <div className="flex items-center justify-center space-x-2 mb-2">
-                  <span className="text-3xl">{getRatingEmoji(result.rating)}</span>
-                  <span className="text-2xl font-bold text-gray-300">Your Score:</span>
+                  <span className="text-3xl">🎼</span>
+                  <span className="text-2xl font-bold text-gray-300">Identification Result:</span>
                 </div>
-                <div className={`text-4xl font-bold ${getRatingColor(result.rating)}`}>
-                  {result.rating}/10
-                </div>
-              </div>
-              
-              <div className="border-t border-gray-600 pt-4">
-                <h3 className="text-lg font-semibold text-purple-300 mb-2 flex items-center">
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                  </svg>
-                  Feedback & Tips:
-                </h3>
-                <p className="text-gray-300 leading-relaxed">
+                <div className="text-lg font-semibold text-blue-300">
                   {result.suggestions}
-                </p>
+                </div>
               </div>
             </div>
           )}

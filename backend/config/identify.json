@@ -1,0 +1,9 @@
+{
+  "host": "identify-us-west-2.acrcloud.com",
+  "endpoint": "/v1/identify",
+  "signature_version": "1",
+  "data_type": "audio",
+  "secure": true,
+  "access_key": "592e89c4293e2fad4e6a1af7ba1638cf",
+  "access_secret": "9h6vY9iReGdjChC9X4gpHDzScMYfxY7jm69ctaCz"
+}
